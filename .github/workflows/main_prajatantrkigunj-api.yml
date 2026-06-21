@@ -10,7 +10,8 @@ on:
   workflow_dispatch:
 
 env:
-  AZURE_FUNCTIONAPP_PACKAGE_PATH: '.' # set this to the path to your web app project, defaults to the repository root
+  AZURE_FUNCTIONAPP_NAME: 'prajatantrkigunj-api'
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: 'CloudNews.Functions' # set this to the path to your web app project, defaults to the repository root
   DOTNET_VERSION: '9.0.x' # set this to the dotnet version to use
 
 jobs:
