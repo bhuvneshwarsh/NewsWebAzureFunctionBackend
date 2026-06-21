@@ -1,0 +1,23 @@
+
+```http
+### Login as SuperAdmin
+POST http://localhost:7071/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "bhuvneshwar.sh@gmail.com",
+  "password": "0009320@GoluBM"
+}
+
+###
+
+### Register a new user
+POST http://localhost:7071/api/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Test Reporter",
+  "email": "reporter@test.com",
+  "password": "Test@123"
+}
+```

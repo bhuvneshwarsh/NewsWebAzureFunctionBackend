@@ -1,0 +1,15 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+## Azure Functions local settings (contains secrets!)
+local.settings.json
+
+## Build output
+publish/
+
+## Logs
+*.log
