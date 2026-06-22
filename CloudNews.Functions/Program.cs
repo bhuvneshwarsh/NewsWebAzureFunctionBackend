@@ -1,13 +1,18 @@
 using CloudNews.Functions.Data;
 using CloudNews.Functions.Services;
 using Microsoft.Azure.Functions.Worker;
+// Removed: Microsoft.Azure.Functions.Worker.Builder is not required or may not exist in this SDK version
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 var host = new HostBuilder()
-    .ConfigureFunctionsWebApplication()
+    .ConfigureFunctionsWebApplication(worker =>
+    {
+        // ── CORS middleware — must be FIRST ───────────────────────────────
+        worker.UseMiddleware<CloudNews.Functions.Middleware.CorsMiddleware>();
+    })
     .ConfigureAppConfiguration((context, config) =>
     {
         config
@@ -30,8 +35,9 @@ var host = new HostBuilder()
             )
         );
 
-        // ── JWT service ───────────────────────────────────────────────────
+        // ── Services ──────────────────────────────────────────────────────
         services.AddSingleton<IJwtService, JwtService>();
+        services.AddSingleton<IBlobService, BlobService>();
 
         // ── Application Insights ──────────────────────────────────────────
         services.AddApplicationInsightsTelemetryWorkerService();
@@ -39,7 +45,7 @@ var host = new HostBuilder()
     })
     .Build();
 
-// ── Auto-migrate on startup (safe for Basic tier) ────────────────────────────
+// ── Auto-migrate on startup ───────────────────────────────────────────────────
 using (var scope = host.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
