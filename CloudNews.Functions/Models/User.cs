@@ -15,9 +15,14 @@ public class User
     [Required]
     public string PasswordHash { get; set; } = string.Empty;
 
-    // Values: SuperAdmin | Admin | Reporter | User
+    // Values: SuperAdmin | Admin | Reporter | Employee | User
     [Required, MaxLength(50)]
     public string Role { get; set; } = "User";
+
+    // Forces password change on next login
+    public bool MustChangePassword { get; set; } = false;
+
+    public DateTime? LastLoginAt { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

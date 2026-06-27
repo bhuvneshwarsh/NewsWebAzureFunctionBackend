@@ -6,7 +6,6 @@ public class Employee
 {
     public int Id { get; set; }
 
-    // Auto-generated unique Employee ID like "EMP-2024-00001"
     [Required, MaxLength(30)]
     public string EmployeeId { get; set; } = string.Empty;
 
@@ -27,23 +26,27 @@ public class Employee
 
     public DateOnly? DateOfBirth { get; set; }
 
-    // Profile photo — stored in Azure Blob
     [MaxLength(1000)]
     public string? ImageUrl { get; set; }
 
-    // Govt ID (Aadhaar / PAN / Passport etc.)
     [MaxLength(100)]
     public string? GovtIdNumber { get; set; }
 
     [MaxLength(50)]
-    public string? GovtIdType { get; set; }  // "Aadhaar", "PAN", "Passport", etc.
+    public string? GovtIdType { get; set; }
 
-    // Employment validity
     public DateOnly? ValidUpto { get; set; }
 
     public bool IsActive { get; set; } = true;
 
     public int DisplayOrder { get; set; } = 0;
+
+    // ── Login access ──────────────────────────────────────────────────────────
+    // Whether this employee has been granted portal login access
+    public bool HasLoginAccess { get; set; } = false;
+
+    // FK to Users table — set when login is created
+    public int? LinkedUserId { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
