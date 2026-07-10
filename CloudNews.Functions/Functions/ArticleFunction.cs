@@ -13,43 +13,50 @@ namespace CloudNews.Functions.Functions;
 
 public class ArticleFunction
 {
-    private readonly ApplicationDbContext   _db;
-    private readonly IJwtService            _jwt;
+    private readonly ApplicationDbContext    _db;
+    private readonly IJwtService             _jwt;
     private readonly ILogger<ArticleFunction> _log;
 
     private static readonly JsonSerializerOptions JsonOpts =
-        new() { PropertyNameCaseInsensitive = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+        new() { PropertyNamingPolicy  = JsonNamingPolicy.CamelCase,
+                PropertyNameCaseInsensitive = true };
 
-    public ArticleFunction(ApplicationDbContext db, IJwtService jwt, ILogger<ArticleFunction> log)
+    public ArticleFunction(ApplicationDbContext db, IJwtService jwt,
+        ILogger<ArticleFunction> log)
     {
         _db  = db;
         _jwt = jwt;
         _log = log;
     }
 
-    // ── GET /api/articles?page=1&size=10&category=politics&published=true ─────
+    // ── GET /api/articles?page=1&size=10&category=politics&all=false ──────────
     [Function("GetArticles")]
     public async Task<HttpResponseData> GetArticles(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "articles")] HttpRequestData req)
     {
-        var qs         = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
-        var page       = int.TryParse(qs["page"],      out var p) ? Math.Max(1, p)  : 1;
-        var size       = int.TryParse(qs["size"],      out var s) ? Math.Clamp(s, 1, 50) : 10;
-        var category   = qs["category"];
-        var onlyPublic = !bool.TryParse(qs["all"], out var all) || !all;
+        var qs       = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
+        var page     = int.TryParse(qs["page"], out var p) ? Math.Max(1, p) : 1;
+        var size     = int.TryParse(qs["size"], out var s) ? Math.Clamp(s, 1, 50) : 10;
+        var category = qs["category"];
+        var showAll  = bool.TryParse(qs["all"], out var a) && a;
+
+        // Verify admin token if requesting all (including drafts)
+        var principal = AuthHelper.GetPrincipal(req, _jwt);
+        var isAdmin   = AuthHelper.HasRole(principal, "SuperAdmin", "Admin", "Reporter", "Employee");
 
         var query = _db.Articles
             .Include(a => a.Category)
             .Include(a => a.Author)
             .AsQueryable();
 
-        if (onlyPublic)
+        // Public: only published. Admin with ?all=true: all articles
+        if (!showAll || !isAdmin)
             query = query.Where(a => a.IsPublished);
 
         if (!string.IsNullOrEmpty(category))
             query = query.Where(a => a.Category!.Slug == category);
 
-        var total   = await query.CountAsync();
+        var total    = await query.CountAsync();
         var articles = await query
             .OrderByDescending(a => a.PublishedAt ?? a.CreatedAt)
             .Skip((page - 1) * size)
@@ -81,6 +88,9 @@ public class ArticleFunction
     }
 
     // ── GET /api/articles/{slug} ──────────────────────────────────────────────
+    // NOTE: View count is NO LONGER incremented here.
+    // The frontend calls POST /api/articles/{slug}/view separately.
+    // This prevents double-counting and fixes the silent failure bug.
     [Function("GetArticleBySlug")]
     public async Task<HttpResponseData> GetArticleBySlug(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "articles/{slug}")] HttpRequestData req,
@@ -93,14 +103,6 @@ public class ArticleFunction
 
         if (article == null)
             return await NotFound(req, "Article not found.");
-
-        // Increment view count (fire and forget)
-        _ = Task.Run(async () =>
-        {
-            await using var scope = _db.Database.GetDbConnection();
-            article.Views++;
-            await _db.SaveChangesAsync();
-        });
 
         var detail = new ArticleDetail
         {
@@ -122,19 +124,52 @@ public class ArticleFunction
         return await OkJson(req, ApiResponse<ArticleDetail>.Ok(detail));
     }
 
-    // ── POST /api/articles  [Admin | Reporter] ────────────────────────────────
+    // ── POST /api/articles/{slug}/view  (public — called by frontend on open) ─
+    // This is the CORRECT way to track views:
+    // - Uses ExecuteUpdateAsync (direct SQL UPDATE, no EF tracking bugs)
+    // - One DB round trip, no race conditions
+    // - Returns 204 No Content (fire and forget from frontend)
+    [Function("TrackArticleView")]
+    public async Task<HttpResponseData> TrackArticleView(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post",
+            Route = "articles/{slug}/view")] HttpRequestData req,
+        string slug)
+    {
+        try
+        {
+            // Direct SQL: UPDATE Articles SET Views = Views + 1 WHERE Slug = @slug
+            var updated = await _db.Articles
+                .Where(a => a.Slug == slug && a.IsPublished)
+                .ExecuteUpdateAsync(s =>
+                    s.SetProperty(a => a.Views, a => a.Views + 1));
+
+            _log.LogInformation("View tracked for slug '{Slug}'. Rows updated: {N}",
+                slug, updated);
+        }
+        catch (Exception ex)
+        {
+            // Never let a view-tracking failure break the user experience
+            _log.LogWarning(ex, "Failed to track view for slug '{Slug}'", slug);
+        }
+
+        // Always return 204 — frontend doesn't need a response body
+        return req.CreateResponse(HttpStatusCode.NoContent);
+    }
+
+    // ── POST /api/articles  [Admin | Reporter | Employee] ────────────────────
     [Function("CreateArticle")]
     public async Task<HttpResponseData> CreateArticle(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "articles")] HttpRequestData req)
     {
         var principal = AuthHelper.GetPrincipal(req, _jwt);
-        if (!AuthHelper.HasRole(principal, "SuperAdmin", "Admin", "Reporter"))
+        if (!AuthHelper.HasRole(principal, "SuperAdmin", "Admin", "Reporter", "Employee"))
             return await Unauthorized(req, "Admin or Reporter role required.");
 
         var body = await req.ReadAsStringAsync();
         var dto  = JsonSerializer.Deserialize<CreateArticleRequest>(body ?? "", JsonOpts);
 
-        if (dto == null || string.IsNullOrWhiteSpace(dto.Title) || string.IsNullOrWhiteSpace(dto.Content))
+        if (dto == null || string.IsNullOrWhiteSpace(dto.Title)
+                        || string.IsNullOrWhiteSpace(dto.Content))
             return await BadRequest(req, "Title and content are required.");
 
         if (!await _db.Categories.AnyAsync(c => c.Id == dto.CategoryId))
@@ -161,18 +196,20 @@ public class ArticleFunction
         _db.Articles.Add(article);
         await _db.SaveChangesAsync();
 
-        _log.LogInformation("Article created: {Id} by user {AuthorId}", article.Id, authorId);
-        return await Created(req, ApiResponse<object>.Ok(new { article.Id, article.Slug }, "Article created"));
+        _log.LogInformation("Article created: {Id} '{Title}'", article.Id, article.Title);
+
+        return await Created(req, ApiResponse<object>.Ok(
+            new { article.Id, article.Slug }, "Article created"));
     }
 
-    // ── PUT /api/articles/{id}  [Admin | Reporter] ────────────────────────────
+    // ── PUT /api/articles/{id}  [Admin | Reporter | Employee] ────────────────
     [Function("UpdateArticle")]
     public async Task<HttpResponseData> UpdateArticle(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "articles/{id:int}")] HttpRequestData req,
-        int id)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "put",
+            Route = "articles/{id:int}")] HttpRequestData req, int id)
     {
         var principal = AuthHelper.GetPrincipal(req, _jwt);
-        if (!AuthHelper.HasRole(principal, "SuperAdmin", "Admin", "Reporter"))
+        if (!AuthHelper.HasRole(principal, "SuperAdmin", "Admin", "Reporter", "Employee"))
             return await Unauthorized(req, "Admin or Reporter role required.");
 
         var article = await _db.Articles.FindAsync(id);
@@ -202,14 +239,15 @@ public class ArticleFunction
         article.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
 
-        return await OkJson(req, ApiResponse<object>.Ok(new { article.Id, article.Slug }, "Article updated"));
+        return await OkJson(req, ApiResponse<object>.Ok(
+            new { article.Id, article.Slug }, "Article updated"));
     }
 
     // ── DELETE /api/articles/{id}  [SuperAdmin] ───────────────────────────────
     [Function("DeleteArticle")]
     public async Task<HttpResponseData> DeleteArticle(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "articles/{id:int}")] HttpRequestData req,
-        int id)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "delete",
+            Route = "articles/{id:int}")] HttpRequestData req, int id)
     {
         var principal = AuthHelper.GetPrincipal(req, _jwt);
         if (!AuthHelper.HasRole(principal, "SuperAdmin"))
@@ -225,7 +263,7 @@ public class ArticleFunction
         return await OkJson(req, ApiResponse<object>.Ok(new { id }, "Article deleted"));
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // ── HTTP helpers ──────────────────────────────────────────────────────────
 
     private static async Task<HttpResponseData> OkJson(HttpRequestData req, object data)
     {
@@ -247,7 +285,8 @@ public class ArticleFunction
     {
         var res = req.CreateResponse(HttpStatusCode.BadRequest);
         res.Headers.Add("Content-Type", "application/json");
-        await res.WriteStringAsync(JsonSerializer.Serialize(ApiResponse<object>.Fail(msg), JsonOpts));
+        await res.WriteStringAsync(JsonSerializer.Serialize(
+            ApiResponse<object>.Fail(msg), JsonOpts));
         return res;
     }
 
@@ -255,7 +294,8 @@ public class ArticleFunction
     {
         var res = req.CreateResponse(HttpStatusCode.Unauthorized);
         res.Headers.Add("Content-Type", "application/json");
-        await res.WriteStringAsync(JsonSerializer.Serialize(ApiResponse<object>.Fail(msg), JsonOpts));
+        await res.WriteStringAsync(JsonSerializer.Serialize(
+            ApiResponse<object>.Fail(msg), JsonOpts));
         return res;
     }
 
@@ -263,7 +303,8 @@ public class ArticleFunction
     {
         var res = req.CreateResponse(HttpStatusCode.NotFound);
         res.Headers.Add("Content-Type", "application/json");
-        await res.WriteStringAsync(JsonSerializer.Serialize(ApiResponse<object>.Fail(msg), JsonOpts));
+        await res.WriteStringAsync(JsonSerializer.Serialize(
+            ApiResponse<object>.Fail(msg), JsonOpts));
         return res;
     }
 }
