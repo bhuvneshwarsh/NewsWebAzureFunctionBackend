@@ -45,8 +45,12 @@ public class ArticleListItem
     public string  Slug         { get; set; } = string.Empty;
     public string? ThumbnailUrl { get; set; }
     public string  CategoryName { get; set; } = string.Empty;
+    public int     CategoryId   { get; set; }
     public string  AuthorName   { get; set; } = string.Empty;
+    public int     AuthorId     { get; set; }
     public bool    IsPublished  { get; set; }
+    public string  ApprovalStatus { get; set; } = string.Empty;
+    public string? ApprovalNote   { get; set; }
     public int     Views        { get; set; }
     public DateTime? PublishedAt { get; set; }
     public DateTime  CreatedAt   { get; set; }
@@ -54,9 +58,7 @@ public class ArticleListItem
 
 public class ArticleDetail : ArticleListItem
 {
-    public string Content    { get; set; } = string.Empty;
-    public int    CategoryId { get; set; }
-    public int    AuthorId   { get; set; }
+    public string Content { get; set; } = string.Empty;
 }
 
 public class PaginatedResult<T>
