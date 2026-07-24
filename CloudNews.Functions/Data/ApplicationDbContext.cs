@@ -13,7 +13,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<Article>       Articles       { get; set; }
     public DbSet<EPaper>        EPapers        { get; set; }
     public DbSet<Employee>      Employees      { get; set; }
-    public DbSet<Advertisement> Advertisements { get; set; }  // ← NEW
+    public DbSet<Advertisement> Advertisements { get; set; }
+    public DbSet<EditorProfile> EditorProfiles { get; set; }  // ← NEW
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -60,7 +61,6 @@ public class ApplicationDbContext : DbContext
             e.Property(emp => emp.HasLoginAccess).HasDefaultValue(false);
         });
 
-        // ── Advertisements ────────────────────────────────────────────────────
         modelBuilder.Entity<Advertisement>(e =>
         {
             e.HasKey(a => a.Id);
@@ -68,7 +68,14 @@ public class ApplicationDbContext : DbContext
             e.Property(a => a.DisplayOrder).HasDefaultValue(0);
             e.Property(a => a.Impressions).HasDefaultValue(0);
             e.Property(a => a.Clicks).HasDefaultValue(0);
-            e.Property(a => a.Placement).HasDefaultValue("sidebar");
+        });
+
+        // ── EditorProfiles ────────────────────────────────────────────────────
+        modelBuilder.Entity<EditorProfile>(e =>
+        {
+            e.HasKey(ep => ep.Id);
+            e.Property(ep => ep.IsActive).HasDefaultValue(true);
+            e.Property(ep => ep.DisplayOrder).HasDefaultValue(0);
         });
 
         modelBuilder.Entity<Category>().HasData(
