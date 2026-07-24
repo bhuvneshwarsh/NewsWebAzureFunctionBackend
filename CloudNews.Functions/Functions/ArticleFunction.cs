@@ -29,6 +29,7 @@ public class ArticleFunction
         _log = log;
     }
 
+
     // ── GET /api/articles ─────────────────────────────────────────────────────
     // Public: only published + approved (or NotRequired)
     // Employee: only THEIR OWN articles (all statuses)
