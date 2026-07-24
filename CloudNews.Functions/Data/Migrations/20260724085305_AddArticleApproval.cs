@@ -34,7 +34,7 @@ namespace CloudNews.Functions.Data.Migrations
                 type: "nvarchar(20)",
                 maxLength: 20,
                 nullable: false,
-                defaultValue: "");
+                defaultValue: "NotRequired");
 
             migrationBuilder.AddColumn<DateTime>(
                 name: "ApprovedAt",

@@ -40,6 +40,7 @@ public class ApplicationDbContext : DbContext
             e.HasIndex(a => a.Slug).IsUnique();
             e.Property(a => a.Views).HasDefaultValue(0);
             e.Property(a => a.IsPublished).HasDefaultValue(false);
+            e.Property(a => a.ApprovalStatus).HasDefaultValue(ApprovalStatus.NotRequired);
             e.HasOne(a => a.Category).WithMany(c => c.Articles)
              .HasForeignKey(a => a.CategoryId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(a => a.Author).WithMany(u => u.Articles)
