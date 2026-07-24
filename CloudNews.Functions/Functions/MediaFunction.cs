@@ -47,7 +47,7 @@ public class MediaFunction
 
         // ── Auth check ────────────────────────────────────────────────────────
         var principal = AuthHelper.GetPrincipal(req, _jwt);
-        if (!AuthHelper.HasRole(principal, "SuperAdmin", "Admin", "Reporter"))
+        if (!AuthHelper.HasRole(principal, "SuperAdmin", "Admin", "Reporter", "Employee"))
         {
             _log.LogWarning("Unauthorized media upload attempt.");
             return await Fail(req, HttpStatusCode.Unauthorized, "Login required.");
