@@ -271,8 +271,6 @@ public class ArticleFunction
     }
 
     // ── POST /api/articles ────────────────────────────────────────────────────
-    // Employee articles → ApprovalStatus = Pending, IsPublished = false
-    // Admin/Reporter articles → ApprovalStatus = NotRequired, IsPublished per request
     [Function("CreateArticle")]
     public async Task<HttpResponseData> CreateArticle(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "articles")]
