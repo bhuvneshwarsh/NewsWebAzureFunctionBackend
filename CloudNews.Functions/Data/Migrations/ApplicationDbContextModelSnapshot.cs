@@ -114,8 +114,10 @@ namespace CloudNews.Functions.Data.Migrations
 
                     b.Property<string>("ApprovalStatus")
                         .IsRequired()
+                        .ValueGeneratedOnAdd()
                         .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("NotRequired");
 
                     b.Property<DateTime?>("ApprovedAt")
                         .HasColumnType("datetime2");

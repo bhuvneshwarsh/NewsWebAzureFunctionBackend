@@ -44,7 +44,7 @@ public class ArticlePendingFunction
 
     // ── GET /api/articles-pending  [SuperAdmin / Admin] ───────────────────────
     // New unambiguous route — no conflict with articles/{slug}
-    [Function("GetPendingArticles")]
+    [Function("GetPendingArticlesHyphenRoute")]
     public async Task<HttpResponseData> GetPendingArticles(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get",
             Route = "articles-pending")] HttpRequestData req)
