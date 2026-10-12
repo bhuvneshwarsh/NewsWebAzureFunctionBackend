@@ -138,7 +138,7 @@ public class EmployeeAuthFunction
     // Employee logs in using their EmployeeId + password
     [Function("EmployeeLogin")]
     public async Task<HttpResponseData> EmployeeLogin(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post",
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", "options",
             Route = "auth/employee-login")] HttpRequestData req)
     {
         var body = await req.ReadAsStringAsync();
