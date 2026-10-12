@@ -63,7 +63,6 @@ public class EPaperFunction
     {
         var papers = await _db.EPapers
             .OrderByDescending(p => p.Date)
-            .Take(30)
             .Select(p => new EPaperResponse
             {
                 Id = p.Id, Date = p.Date.ToString("yyyy-MM-dd"),
