@@ -15,6 +15,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<Employee>      Employees      { get; set; }
     public DbSet<Advertisement> Advertisements { get; set; }
     public DbSet<EditorProfile> EditorProfiles { get; set; }  // ← NEW
+    public DbSet<ContactMessage> ContactMessages { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -45,6 +46,8 @@ public class ApplicationDbContext : DbContext
              .HasForeignKey(a => a.CategoryId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(a => a.Author).WithMany(u => u.Articles)
              .HasForeignKey(a => a.AuthorId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(a => a.ApprovedBy).WithMany()
+             .HasForeignKey(a => a.ApprovedById).OnDelete(DeleteBehavior.NoAction);
         });
 
         modelBuilder.Entity<EPaper>(e =>
@@ -79,19 +82,30 @@ public class ApplicationDbContext : DbContext
             e.Property(ep => ep.DisplayOrder).HasDefaultValue(0);
         });
 
+        modelBuilder.Entity<ContactMessage>(e =>
+        {
+            e.HasKey(message => message.Id);
+            e.HasIndex(message => message.SubmittedAt);
+        });
+
         modelBuilder.Entity<Category>().HasData(
             new Category { Id = 1,  Name = "Politics",      Slug = "politics"      },
             new Category { Id = 2,  Name = "Sports",        Slug = "sports"        },
             new Category { Id = 3,  Name = "Business",      Slug = "business"      },
-            new Category { Id = 4,  Name = "Tech",          Slug = "tech"          },
+            new Category { Id = 4,  Name = "Sci-Tech",      Slug = "tech"          },
             new Category { Id = 5,  Name = "World",         Slug = "world"         },
             new Category { Id = 6,  Name = "Entertainment", Slug = "entertainment" },
-            new Category { Id = 7,  Name = "Health",        Slug = "health"        },
-            new Category { Id = 8,  Name = "India",         Slug = "india"         },
-            new Category { Id = 9,  Name = "Lifestyle",     Slug = "lifestyle"     },
-            new Category { Id = 10, Name = "Opinion",       Slug = "opinion"       },
-            new Category { Id = 11, Name = "Science",       Slug = "science"       },
-            new Category { Id = 12, Name = "Spiritual",     Slug = "spiritual"     }
+            new Category { Id = 8,  Name = "Health",       Slug = "health"        },
+            new Category { Id = 11, Name = "Spiritual",     Slug = "spiritual"     },
+            new Category { Id = 12, Name = "India",         Slug = "india"          },
+            new Category { Id = 13, Name = "State News",    Slug = "state-news"    },
+            new Category { Id = 14, Name = "Local News",    Slug = "local"          },
+            new Category { Id = 15, Name = "Crime",         Slug = "crime"          },
+            new Category { Id = 16, Name = "Education",     Slug = "education"      },
+            new Category { Id = 17, Name = "Lifestyle",     Slug = "lifestyle"      },
+            new Category { Id = 18, Name = "Law & Order",   Slug = "law-n-order"    },
+            new Category { Id = 19, Name = "Government",    Slug = "govt"           },
+            new Category { Id = 20, Name = "Editorial",     Slug = "editorial"      }
         );
     }
 }

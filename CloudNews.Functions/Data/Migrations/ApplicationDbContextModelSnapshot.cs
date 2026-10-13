@@ -229,7 +229,7 @@ namespace CloudNews.Functions.Data.Migrations
                         new
                         {
                             Id = 4,
-                            Name = "Tech",
+                            Name = "Sci-Tech",
                             Slug = "tech"
                         },
                         new
@@ -246,40 +246,108 @@ namespace CloudNews.Functions.Data.Migrations
                         },
                         new
                         {
-                            Id = 7,
+                            Id = 8,
                             Name = "Health",
                             Slug = "health"
                         },
                         new
                         {
-                            Id = 8,
+                            Id = 11,
+                            Name = "Spiritual",
+                            Slug = "spiritual"
+                        },
+                        new
+                        {
+                            Id = 12,
                             Name = "India",
                             Slug = "india"
                         },
                         new
                         {
-                            Id = 9,
+                            Id = 13,
+                            Name = "State News",
+                            Slug = "state-news"
+                        },
+                        new
+                        {
+                            Id = 14,
+                            Name = "Local News",
+                            Slug = "local"
+                        },
+                        new
+                        {
+                            Id = 15,
+                            Name = "Crime",
+                            Slug = "crime"
+                        },
+                        new
+                        {
+                            Id = 16,
+                            Name = "Education",
+                            Slug = "education"
+                        },
+                        new
+                        {
+                            Id = 17,
                             Name = "Lifestyle",
                             Slug = "lifestyle"
                         },
                         new
                         {
-                            Id = 10,
-                            Name = "Opinion",
-                            Slug = "opinion"
+                            Id = 18,
+                            Name = "Law & Order",
+                            Slug = "law-n-order"
                         },
                         new
                         {
-                            Id = 11,
-                            Name = "Science",
-                            Slug = "science"
+                            Id = 19,
+                            Name = "Government",
+                            Slug = "govt"
                         },
                         new
                         {
-                            Id = 12,
-                            Name = "Spiritual",
-                            Slug = "spiritual"
+                            Id = 20,
+                            Name = "Editorial",
+                            Slug = "editorial"
                         });
+                });
+
+            modelBuilder.Entity("CloudNews.Functions.Models.ContactMessage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("nvarchar(320)");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(10000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("SubmittedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SubmittedAt");
+
+                    b.ToTable("ContactMessages");
                 });
 
             modelBuilder.Entity("CloudNews.Functions.Models.EPaper", b =>
@@ -533,7 +601,8 @@ namespace CloudNews.Functions.Data.Migrations
                 {
                     b.HasOne("CloudNews.Functions.Models.User", "ApprovedBy")
                         .WithMany()
-                        .HasForeignKey("ApprovedById");
+                        .HasForeignKey("ApprovedById")
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("CloudNews.Functions.Models.User", "Author")
                         .WithMany("Articles")
